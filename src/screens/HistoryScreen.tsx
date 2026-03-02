@@ -1,6 +1,6 @@
 import { View, Text } from "react-native";
 
-export default function historyScreen() {
+export default function HistoryScreen() {
   return (
     <View>
       <Text>History Screen</Text>

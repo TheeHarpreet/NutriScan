@@ -13,6 +13,7 @@ import { normaliseEAN } from "../logic/normaliseBarcode";
 import { calculateHealthScore } from "../logic/rating";
 import { ScoreBadge } from "../components/ScoreBadge";
 import { NutrientList } from "../components/NutrientList";
+import { addToHistory } from "../services/history";
 
 type Props = {
   route: { params: { ean: string } };
@@ -56,6 +57,12 @@ export default function ProductScreen({ route }: Props) {
 
       // 1) normalise the EAN
       const cleanEAN = normaliseEAN(ean);
+      if (!cleanEAN) {
+        setProduct(null);
+        setSource(null);
+        setLoading(false);
+        return;
+      }
 
       // 2) try OFF first
       let result = await fetchFoodByEAN(cleanEAN);
@@ -110,8 +117,8 @@ export default function ProductScreen({ route }: Props) {
     typeof product.additives_n === "number"
       ? product.additives_n
       : Array.isArray(product.additives_tags)
-      ? product.additives_tags.length
-      : 0;
+        ? product.additives_tags.length
+        : 0;
 
   const health = calculateHealthScore(nutrients, additivesCount);
 
@@ -122,6 +129,20 @@ export default function ProductScreen({ route }: Props) {
     product.generic_name_en ||
     product.product_name_en_imported ||
     "Unnamed product";
+
+  useEffect(() => {
+    if (!product || !source) return;
+
+    addToHistory({
+      ean,
+      product_name: displayName,
+      brand: product.brands ?? null,
+      score: health.score ?? null,
+      source,
+      image_url: product.image_front_url ?? null,
+      scanned_at: new Date().toISOString(),
+    });
+  }, [ean, product, source, displayName, health.score]);
 
   // UI for displaying product details
   return (
@@ -145,8 +166,8 @@ export default function ProductScreen({ route }: Props) {
             {source === "food"
               ? "OpenFoodFacts"
               : source === "beauty"
-              ? "OpenBeautyFacts"
-              : "Unknown"}
+                ? "OpenBeautyFacts"
+                : "Unknown"}
           </Text>
 
           {/* score badge */}
