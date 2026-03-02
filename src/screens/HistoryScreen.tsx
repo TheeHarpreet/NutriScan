@@ -7,10 +7,14 @@ import {
   StyleSheet,
   Image,
   TextInput,
+  Alert,
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-
-import { getHistory, clearHistory } from "../services/history";
+import {
+  getHistory,
+  clearHistory,
+  deleteHistoryItem,
+} from "../services/history";
 
 // basic types for filtering/sorting
 type Filter = "all" | "food" | "beauty";
@@ -37,8 +41,21 @@ export default function HistoryScreen() {
 
   // clear history locally (does not affect the OpenFoodFacts/OpenBeautyFacts datasets)
   const onClear = () => {
-    clearHistory();
-    setItems([]);
+    Alert.alert(
+      "Clear history?",
+      "This will remove all saved scans from this device.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear",
+          style: "destructive",
+          onPress: () => {
+            clearHistory();
+            setItems([]);
+          },
+        },
+      ],
+    );
   };
 
   // build the list shown on screen by applying search + category filter + sorting to the  sqlite rows
@@ -92,6 +109,21 @@ export default function HistoryScreen() {
         style={styles.card}
         // tapping a history item re-opens ProductScreen using the stored barcode
         onPress={() => navigation.navigate("Product", { ean: item.ean })}
+        onLongPress={() => {
+          Alert.alert("Delete item?", "Remove this scan from your history?", [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Delete",
+              style: "destructive",
+              onPress: () => {
+                deleteHistoryItem(item.id);
+
+                // update UI
+                setItems((prev) => prev.filter((x) => x.id !== item.id));
+              },
+            },
+          ]);
+        }}
       >
         {item.image_url ? (
           <Image source={{ uri: item.image_url }} style={styles.thumb} />
