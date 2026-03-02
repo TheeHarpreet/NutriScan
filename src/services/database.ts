@@ -23,4 +23,17 @@ export function initDb() {
       scanned_at TEXT NOT NULL
     );
   `);
+
+  db.execSync(`
+  CREATE TABLE IF NOT EXISTS favourites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ean TEXT NOT NULL UNIQUE,
+    product_name TEXT,
+    brand TEXT,
+    score INTEGER,
+    source TEXT,
+    image_url TEXT,
+    added_at TEXT NOT NULL
+  );
+`);
 }

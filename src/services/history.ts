@@ -48,3 +48,8 @@ export function getHistory(limit = 50): HistoryItem[] {
 export function clearHistory() {
   db.runSync(`DELETE FROM history`);
 }
+
+// delete one history entry by its id
+export function deleteHistoryItem(id: number) {
+  db.runSync(`DELETE FROM history WHERE id = ?`, [id]);
+}

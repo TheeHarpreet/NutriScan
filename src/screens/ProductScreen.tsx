@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   Image,
+  Pressable,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { fetchFoodByEAN } from "../services/openfoodfacts";
@@ -14,6 +15,11 @@ import { calculateHealthScore } from "../logic/rating";
 import { ScoreBadge } from "../components/ScoreBadge";
 import { NutrientList } from "../components/NutrientList";
 import { addToHistory } from "../services/history";
+import {
+  addFavourite,
+  removeFavourite,
+  isFavourite,
+} from "../services/favourites";
 
 type Props = {
   route: { params: { ean: string } };
@@ -49,6 +55,7 @@ export default function ProductScreen({ route }: Props) {
   const [loading, setLoading] = useState(true);
   const [product, setProduct] = useState<any>(null);
   const [source, setSource] = useState<"food" | "beauty" | null>(null);
+  const [favourite, setFavourite] = useState(false);
 
   // useEffect runs when the component mounts or when `ean` changes
   useEffect(() => {
@@ -123,6 +130,11 @@ export default function ProductScreen({ route }: Props) {
     });
   }, [ean, product, source, displayName, health?.score]);
 
+  useEffect(() => {
+    if (!product) return;
+    setFavourite(isFavourite(ean));
+  }, [product, ean]);
+
   // Just for design, show a loading spinner while waiting for the API response
   if (loading) {
     return (
@@ -175,6 +187,36 @@ export default function ProductScreen({ route }: Props) {
 
           {/* score badge */}
           <ScoreBadge score={health!.score} label={health!.label} />
+          {/* favourite button (stored locally using SQLite) */}
+          <Pressable
+            onPress={() => {
+              // Toggle favourite state + update SQLite
+              if (favourite) {
+                removeFavourite(ean);
+                setFavourite(false);
+              } else {
+                addFavourite({
+                  ean,
+                  product_name: displayName,
+                  brand: product.brands ?? null,
+                  score: health!.score ?? null,
+                  source,
+                  image_url: product.image_front_url ?? null,
+                });
+                setFavourite(true);
+              }
+            }}
+            style={[
+              styles.favButton,
+              favourite ? styles.favButtonActive : styles.favButtonInactive,
+            ]}
+          >
+            <Text
+              style={[styles.favText, favourite ? styles.favTextActive : null]}
+            >
+              {favourite ? "★ Favourited" : "☆ Add to favourites"}
+            </Text>
+          </Pressable>
         </View>
       </View>
 
@@ -264,5 +306,29 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
+  },
+  favButton: {
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    alignSelf: "flex-start",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  favButtonInactive: {
+    backgroundColor: "#f8fafc",
+    borderColor: "#cbd5e1",
+  },
+  favButtonActive: {
+    backgroundColor: "#0f172a",
+    borderColor: "#0f172a",
+  },
+  favText: {
+    fontWeight: "700",
+    fontSize: 13,
+    color: "#0f172a",
+  },
+  favTextActive: {
+    color: "#fff",
   },
 });
