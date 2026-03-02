@@ -9,6 +9,8 @@ import SettingsScreen from "./src/screens/SettingsScreen";
 import ProductScreen from "./src/screens/ProductScreen";
 import HistoryScreen from "./src/screens/HistoryScreen";
 import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect } from "react";
+import { initDb } from "./src/services/database";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -48,6 +50,9 @@ function TabNavigator() {
 }
 
 export default function App() {
+  useEffect(() => {
+    initDb();
+  }, []);
   return (
     <NavigationContainer>
       <Stack.Navigator>
