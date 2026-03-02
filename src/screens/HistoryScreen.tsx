@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,32 +6,85 @@ import {
   Pressable,
   StyleSheet,
   Image,
+  TextInput,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 
 import { getHistory, clearHistory } from "../services/history";
 
+// basic types for filtering/sorting
+type Filter = "all" | "food" | "beauty";
+type Sort = "newest" | "oldest" | "scoreHigh" | "scoreLow";
+
 export default function HistoryScreen() {
   const navigation = useNavigation<any>();
+
+  // Raw rows from SQLite
   const [items, setItems] = useState<any[]>([]);
 
-  // load the most recent scans from SQLite so users can revisit previous products
-  useEffect(() => {
-    const rows = getHistory(100);
-    setItems(rows);
-  }, []);
+  // UI controls
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
+  const [sort, setSort] = useState<Sort>("newest");
 
-  // Manual refresh (simple approach for now). Later we can auto-refresh when screen focuses.
-  const refresh = () => {
-    const rows = getHistory(100);
-    setItems(rows);
-  };
+  // reload history every time the user opens this tab (so it updates after new scans)
+  useFocusEffect(
+    useCallback(() => {
+      const rows = getHistory(200);
+      setItems(rows);
+    }, []),
+  );
 
   // clear history locally (does not affect the OpenFoodFacts/OpenBeautyFacts datasets)
   const onClear = () => {
     clearHistory();
     setItems([]);
   };
+
+  // build the list shown on screen by applying search + category filter + sorting to the  sqlite rows
+  const visibleItems = useMemo(() => {
+    const q = query.trim().toLowerCase();
+
+    let list = items;
+
+    // filter by category
+    if (filter !== "all") {
+      list = list.filter((x) => x.source === filter);
+    }
+
+    // search by name / brand / barcode
+    if (q.length > 0) {
+      list = list.filter((x) => {
+        const name = (x.product_name || "").toLowerCase();
+        const brand = (x.brand || "").toLowerCase();
+        const ean = (x.ean || "").toLowerCase();
+        return name.includes(q) || brand.includes(q) || ean.includes(q);
+      });
+    }
+
+    // Sort
+    list = [...list].sort((a, b) => {
+      if (sort === "newest") {
+        return (
+          new Date(b.scanned_at).getTime() - new Date(a.scanned_at).getTime()
+        );
+      }
+      if (sort === "oldest") {
+        return (
+          new Date(a.scanned_at).getTime() - new Date(b.scanned_at).getTime()
+        );
+      }
+      if (sort === "scoreHigh") {
+        return (b.score ?? -1) - (a.score ?? -1);
+      }
+      if (sort === "scoreLow") {
+        return (a.score ?? 999) - (b.score ?? 999);
+      }
+      return 0;
+    });
+
+    return list;
+  }, [items, query, filter, sort]);
 
   const renderItem = ({ item }: any) => {
     return (
@@ -40,59 +93,126 @@ export default function HistoryScreen() {
         // tapping a history item re-opens ProductScreen using the stored barcode
         onPress={() => navigation.navigate("Product", { ean: item.ean })}
       >
-        {/* image */}
         {item.image_url ? (
           <Image source={{ uri: item.image_url }} style={styles.thumb} />
         ) : (
           <View style={[styles.thumb, styles.thumbPlaceholder]}>
-            <Text style={{ color: "#666" }}>No image</Text>
+            <Text style={{ color: "#666", fontSize: 12 }}>No image</Text>
           </View>
         )}
 
-        {/* text */}
         <View style={{ flex: 1 }}>
           <Text style={styles.name} numberOfLines={1}>
             {item.product_name || "Unnamed product"}
           </Text>
+
           <Text style={styles.brand} numberOfLines={1}>
-            {item.brand || "Unknown brand"}
+            {item.brand || "Unknown brand"} • {item.source || "unknown"}
           </Text>
+
           <Text style={styles.date}>
             {new Date(item.scanned_at).toLocaleString()}
           </Text>
         </View>
 
-        {/* Score */}
-        <Text style={styles.score}>
-          {typeof item.score === "number" ? `${item.score}/100` : "—"}
-        </Text>
+        <View style={styles.right}>
+          <Text style={styles.score}>
+            {typeof item.score === "number" ? `${item.score}/100` : "—"}
+          </Text>
+        </View>
       </Pressable>
     );
   };
+
+  const Chip = ({
+    label,
+    active,
+    onPress,
+  }: {
+    label: string;
+    active: boolean;
+    onPress: () => void;
+  }) => (
+    <Pressable
+      onPress={onPress}
+      style={[styles.chip, active ? styles.chipActive : styles.chipInactive]}
+    >
+      <Text style={[styles.chipText, active ? styles.chipTextActive : null]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
 
   return (
     <View style={styles.container}>
       {/* header */}
       <View style={styles.header}>
         <Text style={styles.title}>History</Text>
-
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <Pressable onPress={refresh}>
-            <Text style={styles.action}>Refresh</Text>
-          </Pressable>
-
-          <Pressable onPress={onClear}>
-            <Text style={[styles.action, { color: "#b91c1c" }]}>Clear</Text>
-          </Pressable>
-        </View>
+        <Pressable onPress={onClear}>
+          <Text style={styles.clear}>Clear</Text>
+        </Pressable>
       </View>
 
-      {/* empty state */}
-      {items.length === 0 ? (
-        <Text style={styles.empty}>No scans yet. Scan a product first.</Text>
+      {/* search */}
+      <TextInput
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Search by name, brand or barcode..."
+        style={styles.search}
+        autoCapitalize="none"
+      />
+
+      {/* filter chips */}
+      <View style={styles.row}>
+        <Chip
+          label="All"
+          active={filter === "all"}
+          onPress={() => setFilter("all")}
+        />
+        <Chip
+          label="Food"
+          active={filter === "food"}
+          onPress={() => setFilter("food")}
+        />
+        <Chip
+          label="Beauty"
+          active={filter === "beauty"}
+          onPress={() => setFilter("beauty")}
+        />
+      </View>
+
+      {/* sort chips */}
+      <View style={styles.row}>
+        <Chip
+          label="Newest"
+          active={sort === "newest"}
+          onPress={() => setSort("newest")}
+        />
+        <Chip
+          label="Oldest"
+          active={sort === "oldest"}
+          onPress={() => setSort("oldest")}
+        />
+        <Chip
+          label="Score ↑"
+          active={sort === "scoreHigh"}
+          onPress={() => setSort("scoreHigh")}
+        />
+        <Chip
+          label="Score ↓"
+          active={sort === "scoreLow"}
+          onPress={() => setSort("scoreLow")}
+        />
+      </View>
+
+      {/* list */}
+      {visibleItems.length === 0 ? (
+        <Text style={styles.empty}>
+          No scans match your search/filter. Try clearing the search.
+        </Text>
       ) : (
         <FlatList
-          data={items}
+          data={visibleItems}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
           contentContainerStyle={{ paddingBottom: 24 }}
@@ -118,10 +238,47 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "800",
   },
-  action: {
+  clear: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
+    color: "#b91c1c",
+  },
+  search: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#cbd5e1",
+    marginBottom: 10,
+  },
+  row: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+    marginBottom: 10,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  chipInactive: {
+    backgroundColor: "#f8fafc",
+    borderColor: "#cbd5e1",
+  },
+  chipActive: {
+    backgroundColor: "#0f172a",
+    borderColor: "#0f172a",
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: "700",
     color: "#0f172a",
+  },
+  chipTextActive: {
+    color: "#fff",
   },
   empty: {
     marginTop: 16,
@@ -148,21 +305,26 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   brand: {
     marginTop: 2,
     color: "#475569",
     fontSize: 13,
+    fontWeight: "600",
   },
   date: {
     marginTop: 4,
     color: "#64748b",
     fontSize: 12,
   },
+  right: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
   score: {
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#0f172a",
   },
 });
