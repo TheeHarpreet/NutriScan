@@ -87,6 +87,42 @@ export default function ProductScreen({ route }: Props) {
     loadProduct();
   }, [ean]);
 
+  // Shorter alias to make nutrition values easier to use
+  const nutrients = product?.nutriments || {};
+
+  const additivesCount =
+    typeof product?.additives_n === "number"
+      ? product.additives_n
+      : Array.isArray(product?.additives_tags)
+        ? product.additives_tags.length
+        : 0;
+
+  const health = product
+    ? calculateHealthScore(nutrients, additivesCount)
+    : null;
+
+  const displayName =
+    product?.product_name ||
+    product?.product_name_en ||
+    product?.generic_name ||
+    product?.generic_name_en ||
+    product?.product_name_en_imported ||
+    "Unnamed product";
+
+  useEffect(() => {
+    if (!product || !source || !health) return;
+
+    addToHistory({
+      ean,
+      product_name: displayName,
+      brand: product.brands ?? null,
+      score: health.score ?? null,
+      source,
+      image_url: product.image_front_url ?? null,
+      scanned_at: new Date().toISOString(),
+    });
+  }, [ean, product, source, displayName, health?.score]);
+
   // Just for design, show a loading spinner while waiting for the API response
   if (loading) {
     return (
@@ -109,40 +145,7 @@ export default function ProductScreen({ route }: Props) {
     );
   }
 
-  // Shorter alias to make nutrition values easier to use
-  const nutrients = product.nutriments || {};
   const energyKcal = getEnergyKcal(nutrients);
-
-  const additivesCount =
-    typeof product.additives_n === "number"
-      ? product.additives_n
-      : Array.isArray(product.additives_tags)
-        ? product.additives_tags.length
-        : 0;
-
-  const health = calculateHealthScore(nutrients, additivesCount);
-
-  const displayName =
-    product.product_name ||
-    product.product_name_en ||
-    product.generic_name ||
-    product.generic_name_en ||
-    product.product_name_en_imported ||
-    "Unnamed product";
-
-  useEffect(() => {
-    if (!product || !source) return;
-
-    addToHistory({
-      ean,
-      product_name: displayName,
-      brand: product.brands ?? null,
-      score: health.score ?? null,
-      source,
-      image_url: product.image_front_url ?? null,
-      scanned_at: new Date().toISOString(),
-    });
-  }, [ean, product, source, displayName, health.score]);
 
   // UI for displaying product details
   return (
@@ -171,13 +174,13 @@ export default function ProductScreen({ route }: Props) {
           </Text>
 
           {/* score badge */}
-          <ScoreBadge score={health.score} label={health.label} />
+          <ScoreBadge score={health!.score} label={health!.label} />
         </View>
       </View>
 
       {/* negatives and positives*/}
-      <NutrientList title="Negatives" aspects={health.negatives} />
-      <NutrientList title="Positives" aspects={health.positives} />
+      <NutrientList title="Negatives" aspects={health!.negatives} />
+      <NutrientList title="Positives" aspects={health!.positives} />
 
       {/* ingredients */}
       <Text style={styles.section}>Ingredients</Text>
