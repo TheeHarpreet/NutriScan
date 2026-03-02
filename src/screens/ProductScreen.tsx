@@ -7,7 +7,7 @@ import {
   Image,
   Pressable,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { fetchFoodByEAN } from "../services/openfoodfacts";
 import { fetchBeautyByEAN } from "../services/openbeautyfacts";
 import { normaliseEAN } from "../logic/normaliseBarcode";
@@ -56,6 +56,7 @@ export default function ProductScreen({ route }: Props) {
   const [product, setProduct] = useState<any>(null);
   const [source, setSource] = useState<"food" | "beauty" | null>(null);
   const [favourite, setFavourite] = useState(false);
+  const savedRef = useRef<string | null>(null);
 
   // useEffect runs when the component mounts or when `ean` changes
   useEffect(() => {
@@ -118,6 +119,10 @@ export default function ProductScreen({ route }: Props) {
 
   useEffect(() => {
     if (!product || !source || !health) return;
+
+    // prevent accidental duplicate inserts for the same screen load
+    if (savedRef.current === ean) return;
+    savedRef.current = ean;
 
     addToHistory({
       ean,

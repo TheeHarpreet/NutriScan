@@ -108,7 +108,12 @@ export default function HistoryScreen() {
       <Pressable
         style={styles.card}
         // tapping a history item re-opens ProductScreen using the stored barcode
-        onPress={() => navigation.navigate("Product", { ean: item.ean })}
+        onPress={() =>
+          navigation.navigate("Product", {
+            ean: item.ean,
+            saveToHistory: false,
+          })
+        }
         onLongPress={() => {
           Alert.alert("Delete item?", "Remove this scan from your history?", [
             { text: "Cancel", style: "cancel" },

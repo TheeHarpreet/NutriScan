@@ -17,8 +17,8 @@ export type HistoryItem = {
  */
 export function addToHistory(item: Omit<HistoryItem, "id">) {
   db.runSync(
-    `INSERT INTO history (ean, product_name, brand, score, source, image_url, scanned_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT OR REPLACE INTO history (ean, product_name, brand, score, source, image_url, scanned_at)
+   VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       item.ean,
       item.product_name,
