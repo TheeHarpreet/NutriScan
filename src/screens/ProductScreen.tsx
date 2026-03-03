@@ -22,7 +22,7 @@ import {
 } from "../services/favourites";
 
 type Props = {
-  route: { params: { ean: string } };
+  route: { params: { ean: string; saveToHistory?: boolean } };
 };
 
 // helper to get kcal value from different type of fields
@@ -48,7 +48,7 @@ function getEnergyKcal(nutriments: any): number | null {
 
 export default function ProductScreen({ route }: Props) {
   // read the barcode value passed from ScanScreen
-  const { ean } = route.params;
+  const { ean, saveToHistory = false } = route.params;
   const rawEAN = route.params.ean;
 
   // local state to track loading status, product data and which API it came from
@@ -118,11 +118,8 @@ export default function ProductScreen({ route }: Props) {
     "Unnamed product";
 
   useEffect(() => {
+    if (!saveToHistory) return;
     if (!product || !source || !health) return;
-
-    // prevent accidental duplicate inserts for the same screen load
-    if (savedRef.current === ean) return;
-    savedRef.current = ean;
 
     addToHistory({
       ean,
@@ -133,7 +130,7 @@ export default function ProductScreen({ route }: Props) {
       image_url: product.image_front_url ?? null,
       scanned_at: new Date().toISOString(),
     });
-  }, [ean, product, source, displayName, health?.score]);
+  }, [saveToHistory, ean, product, source, displayName, health?.score]);
 
   useEffect(() => {
     if (!product) return;
