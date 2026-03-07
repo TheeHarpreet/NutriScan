@@ -15,6 +15,14 @@ export function addFavourite(item: {
   score: number | null;
   source: "food" | "beauty" | null;
   image_url: string | null;
+
+  sugars_100g?: number | null;
+  salt_100g?: number | null;
+  saturated_fat_100g?: number | null;
+  protein_100g?: number | null;
+  fibre_100g?: number | null;
+  additives_n?: number | null;
+  category_tag?: string | null;
 }) {
   db.runSync(
     `INSERT OR REPLACE INTO favourites (ean, product_name, brand, score, source, image_url, added_at)
@@ -27,6 +35,14 @@ export function addFavourite(item: {
       item.source,
       item.image_url,
       new Date().toISOString(),
+
+      item.sugars_100g ?? null,
+      item.salt_100g ?? null,
+      item.saturated_fat_100g ?? null,
+      item.protein_100g ?? null,
+      item.fibre_100g ?? null,
+      item.additives_n ?? null,
+      item.category_tag ?? null,
     ],
   );
 }

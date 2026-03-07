@@ -9,6 +9,14 @@ export type HistoryItem = {
   source: "food" | "beauty" | null;
   image_url: string | null;
   scanned_at: string; // ISO string
+
+  sugars_100g?: number | null;
+  salt_100g?: number | null;
+  saturated_fat_100g?: number | null;
+  protein_100g?: number | null;
+  fibre_100g?: number | null;
+  additives_n?: number | null;
+  category_tag?: string | null;
 };
 
 /**
@@ -27,6 +35,14 @@ export function addToHistory(item: Omit<HistoryItem, "id">) {
       item.source,
       item.image_url,
       item.scanned_at,
+
+      item.sugars_100g ?? null,
+      item.salt_100g ?? null,
+      item.saturated_fat_100g ?? null,
+      item.protein_100g ?? null,
+      item.fibre_100g ?? null,
+      item.additives_n ?? null,
+      item.category_tag ?? null,
     ],
   );
 }
