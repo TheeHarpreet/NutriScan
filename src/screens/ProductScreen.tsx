@@ -117,6 +117,29 @@ export default function ProductScreen({ route }: Props) {
     product?.product_name_en_imported ||
     "Unnamed product";
 
+  // food snapshot values (OFF uses nutriments per 100g)
+  const sugars =
+    typeof nutrients?.sugars_100g === "number" ? nutrients.sugars_100g : null;
+  const salt =
+    typeof nutrients?.salt_100g === "number" ? nutrients.salt_100g : null;
+  const satFat =
+    typeof nutrients?.["saturated-fat_100g"] === "number"
+      ? nutrients["saturated-fat_100g"]
+      : null;
+  const protein =
+    typeof nutrients?.proteins_100g === "number"
+      ? nutrients.proteins_100g
+      : null;
+  const fibre =
+    typeof nutrients?.fiber_100g === "number" ? nutrients.fiber_100g : null;
+
+  // category pick (first tag is good enough for mvp)
+  const categoryTag =
+    Array.isArray(product?.categories_tags) &&
+    product.categories_tags.length > 0
+      ? product.categories_tags[0]
+      : null;
+
   useEffect(() => {
     if (!saveToHistory) return;
     if (!product || !source || !health) return;
@@ -129,6 +152,14 @@ export default function ProductScreen({ route }: Props) {
       source,
       image_url: product.image_front_url ?? null,
       scanned_at: new Date().toISOString(),
+
+      sugars_100g: sugars,
+      salt_100g: salt,
+      saturated_fat_100g: satFat,
+      protein_100g: protein,
+      fibre_100g: fibre,
+      additives_n: additivesCount,
+      category_tag: categoryTag,
     });
   }, [saveToHistory, ean, product, source, displayName, health?.score]);
 
@@ -204,6 +235,14 @@ export default function ProductScreen({ route }: Props) {
                   score: health!.score ?? null,
                   source,
                   image_url: product.image_front_url ?? null,
+
+                  sugars_100g: sugars,
+                  salt_100g: salt,
+                  saturated_fat_100g: satFat,
+                  protein_100g: protein,
+                  fibre_100g: fibre,
+                  additives_n: additivesCount,
+                  category_tag: categoryTag,
                 });
                 setFavourite(true);
               }
