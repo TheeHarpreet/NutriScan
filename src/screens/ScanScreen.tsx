@@ -42,11 +42,11 @@ export default function ScanScreen({ navigation }: any) {
     if (scanned) return;
     setScanned(true);
 
-    // Navigate to product screen with EAN
+    // navigate to product screen with EAN
     const ean = result.data;
-    navigation.navigate("Product", { ean: scanned, saveToHistory: true });
+    navigation.navigate("Product", { ean: ean, saveToHistory: true });
 
-    // Allow new scan after a short delay
+    // allow new scan after a short delay
     setTimeout(() => setScanned(false), 1500);
   };
 

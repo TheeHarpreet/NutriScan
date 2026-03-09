@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   TextInput,
   Alert,
 } from "react-native";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import {
   getHistory,
   clearHistory,
@@ -31,13 +31,15 @@ export default function HistoryScreen() {
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("newest");
 
-  // reload history every time the user opens this tab (so it updates after new scans)
-  useFocusEffect(
-    useCallback(() => {
-      const rows = getHistory(200);
-      setItems(rows);
-    }, []),
-  );
+  const isFocused = useIsFocused();
+
+  // Reload history whenever this tab becomes active
+  useEffect(() => {
+    if (!isFocused) return;
+
+    const rows = getHistory(200);
+    setItems(rows);
+  }, [isFocused]);
 
   // clear history locally (does not affect the OpenFoodFacts/OpenBeautyFacts datasets)
   const onClear = () => {

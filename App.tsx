@@ -61,7 +61,14 @@ export default function App() {
           component={TabNavigator}
           options={{ headerShown: false }}
         />
-        <Stack.Screen name="Product" component={ProductScreen} />
+        <Stack.Screen
+          name="Product"
+          component={ProductScreen}
+          options={{
+            title: "Product",
+            headerBackTitle: "Back",
+          }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

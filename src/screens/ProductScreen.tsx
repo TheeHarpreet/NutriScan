@@ -20,6 +20,12 @@ import {
   removeFavourite,
   isFavourite,
 } from "../services/favourites";
+import { getHistory } from "../services/history";
+import { getFavourites } from "../services/favourites";
+import { buildUserProfile } from "../logic/userProfile";
+import { searchFoodByCategory } from "../services/openfoodfactsSearch";
+import { rankRecommendations } from "../logic/recommend";
+import { useNavigation } from "@react-navigation/native";
 
 type Props = {
   route: { params: { ean: string; saveToHistory?: boolean } };
@@ -56,7 +62,11 @@ export default function ProductScreen({ route }: Props) {
   const [product, setProduct] = useState<any>(null);
   const [source, setSource] = useState<"food" | "beauty" | null>(null);
   const [favourite, setFavourite] = useState(false);
-  const savedRef = useRef<string | null>(null);
+
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+
+  const navigation = useNavigation<any>();
 
   // useEffect runs when the component mounts or when `ean` changes
   useEffect(() => {
@@ -95,6 +105,55 @@ export default function ProductScreen({ route }: Props) {
     loadProduct();
   }, [ean]);
 
+  // category pick (first tag is good enough for mvp)
+  const categoryTag =
+    Array.isArray(product?.categories_tags) &&
+    product.categories_tags.length > 0
+      ? product.categories_tags[0]
+      : null;
+
+  // build personalised recommendations using history + favourites.
+  // for now this only runs for food products with a usable category tag.
+  useEffect(() => {
+    const loadRecommendations = async () => {
+      if (!product || source !== "food" || !categoryTag) {
+        setRecommendations([]);
+        return;
+      }
+
+      setLoadingRecommendations(true);
+
+      try {
+        // load stored user behaviour from SQLite
+        const historyRows = getHistory(200);
+        const favouriteRows = getFavourites(200);
+
+        // build a simple preference profile from past scans and favourites
+        const profile = buildUserProfile(historyRows, favouriteRows);
+
+        // search OpenFoodFacts for products in the same category
+        const candidates = await searchFoodByCategory(categoryTag, 20);
+
+        // remove the current product so it does not recommend itself
+        const filtered = candidates.filter((p: any) => {
+          return p?.code !== ean;
+        });
+
+        // rank the candidates using health score + preference boost
+        const ranked = rankRecommendations(filtered, profile);
+
+        setRecommendations(ranked);
+      } catch (error) {
+        console.log("Recommendation error:", error);
+        setRecommendations([]);
+      } finally {
+        setLoadingRecommendations(false);
+      }
+    };
+
+    loadRecommendations();
+  }, [product, source, categoryTag, ean]);
+
   // Shorter alias to make nutrition values easier to use
   const nutrients = product?.nutriments || {};
 
@@ -117,28 +176,12 @@ export default function ProductScreen({ route }: Props) {
     product?.product_name_en_imported ||
     "Unnamed product";
 
-  // food snapshot values (OFF uses nutriments per 100g)
-  const sugars =
-    typeof nutrients?.sugars_100g === "number" ? nutrients.sugars_100g : null;
-  const salt =
-    typeof nutrients?.salt_100g === "number" ? nutrients.salt_100g : null;
-  const satFat =
-    typeof nutrients?.["saturated-fat_100g"] === "number"
-      ? nutrients["saturated-fat_100g"]
-      : null;
-  const protein =
-    typeof nutrients?.proteins_100g === "number"
-      ? nutrients.proteins_100g
-      : null;
-  const fibre =
-    typeof nutrients?.fiber_100g === "number" ? nutrients.fiber_100g : null;
-
-  // category pick (first tag is good enough for mvp)
-  const categoryTag =
-    Array.isArray(product?.categories_tags) &&
-    product.categories_tags.length > 0
-      ? product.categories_tags[0]
-      : null;
+  // Store a small nutrition snapshot so recommendations can learn from past scans/favourites
+  const sugars = toNumber(nutrients?.sugars_100g);
+  const salt = toNumber(nutrients?.salt_100g);
+  const satFat = toNumber(nutrients?.["saturated-fat_100g"]);
+  const protein = toNumber(nutrients?.proteins_100g);
+  const fibre = toNumber(nutrients?.fiber_100g);
 
   useEffect(() => {
     if (!saveToHistory) return;
@@ -191,6 +234,19 @@ export default function ProductScreen({ route }: Props) {
   }
 
   const energyKcal = getEnergyKcal(nutrients);
+
+  // convert OFF values to numbers.
+  // OFF sometimes returns strings like "12.5" instead of real numbers.
+  function toNumber(value: any): number | null {
+    if (typeof value === "number") return value;
+
+    if (typeof value === "string" && value.trim() !== "") {
+      const parsed = Number(value);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    return null;
+  }
 
   // UI for displaying product details
   return (
@@ -264,6 +320,57 @@ export default function ProductScreen({ route }: Props) {
       {/* negatives and positives*/}
       <NutrientList title="Negatives" aspects={health!.negatives} />
       <NutrientList title="Positives" aspects={health!.positives} />
+
+      {/* recommended products */}
+      <Text style={styles.section}>Recommended for you</Text>
+
+      {loadingRecommendations ? (
+        <Text>Loading recommendations...</Text>
+      ) : recommendations.length === 0 ? (
+        <Text>No recommendations available yet.</Text>
+      ) : (
+        recommendations.map((item, index) => {
+          const p = item.product;
+
+          return (
+            <Pressable
+              key={`${p?.code || index}`}
+              style={styles.recommendCard}
+              onPress={() =>
+                navigation.push("Product", {
+                  ean: p?.code,
+                  saveToHistory: false,
+                })
+              }
+            >
+              {p?.image_front_url ? (
+                <Image
+                  source={{ uri: p.image_front_url }}
+                  style={styles.recommendImage}
+                />
+              ) : (
+                <View
+                  style={[styles.recommendImage, { backgroundColor: "#eee" }]}
+                />
+              )}
+
+              <View style={{ flex: 1 }}>
+                <Text style={styles.recommendName} numberOfLines={1}>
+                  {p?.product_name || "Unnamed product"}
+                </Text>
+
+                <Text style={styles.recommendBrand} numberOfLines={1}>
+                  {p?.brands || "Unknown brand"}
+                </Text>
+
+                <Text style={styles.recommendReason}>{item.reason}</Text>
+              </View>
+
+              <Text style={styles.recommendScore}>{item.finalScore}/100</Text>
+            </Pressable>
+          );
+        })
+      )}
 
       {/* ingredients */}
       <Text style={styles.section}>Ingredients</Text>
@@ -371,5 +478,38 @@ const styles = StyleSheet.create({
   },
   favTextActive: {
     color: "#fff",
+  },
+  recommendCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 10,
+  },
+  recommendImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+  },
+  recommendName: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  recommendBrand: {
+    marginTop: 2,
+    color: "#475569",
+    fontSize: 13,
+  },
+  recommendReason: {
+    marginTop: 4,
+    color: "#64748b",
+    fontSize: 12,
+  },
+  recommendScore: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#0f172a",
   },
 });

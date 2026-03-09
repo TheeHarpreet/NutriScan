@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,18 +7,20 @@ import {
   StyleSheet,
   Image,
 } from "react-native";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { getFavourites, removeFavourite } from "../services/favourites";
 
 export default function FavouritesScreen() {
   const navigation = useNavigation<any>();
   const [items, setItems] = useState<any[]>([]);
+  const isFocused = useIsFocused();
 
-  useFocusEffect(
-    useCallback(() => {
-      setItems(getFavourites(200));
-    }, []),
-  );
+  // reload favourites whenever this tab becomes active
+  useEffect(() => {
+    if (!isFocused) return;
+    const rows = getFavourites(200);
+    setItems(rows);
+  }, [isFocused]);
 
   const renderItem = ({ item }: any) => (
     <Pressable
