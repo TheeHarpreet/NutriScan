@@ -62,7 +62,7 @@ export default function FavouritesScreen() {
 
       {items.length === 0 ? (
         <Text style={styles.empty}>
-          No favourites yet. Star a product to save it.
+          No favourites yet. Tap ☆ on a product to save it here.
         </Text>
       ) : (
         <FlatList

@@ -82,4 +82,7 @@ export function initDb() {
   db.execSync(
     `CREATE INDEX IF NOT EXISTS idx_favourites_ean ON favourites (ean);`,
   );
+  db.execSync(
+    `CREATE INDEX IF NOT EXISTS idx_favourites_added_at ON favourites (added_at);`,
+  );
 }

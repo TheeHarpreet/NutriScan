@@ -57,3 +57,8 @@ export function getFavourites(limit = 200) {
     [limit],
   );
 }
+
+// helper for showing how many favourites the user has saved
+export function getFavouritesCount() {
+  return db.getAllSync(`SELECT id FROM favourites`).length;
+}

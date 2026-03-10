@@ -69,3 +69,27 @@ export function clearHistory() {
 export function deleteHistoryItem(id: number) {
   db.runSync(`DELETE FROM history WHERE id = ?`, [id]);
 }
+
+// analytics summary for the user's scan history
+export function getHistoryStats() {
+  const rows = db.getAllSync(
+    `SELECT score FROM history WHERE score IS NOT NULL`,
+  ) as { score: number }[];
+
+  const totalScans = db.getAllSync(`SELECT id FROM history`).length;
+
+  if (rows.length === 0) {
+    return {
+      totalScans,
+      averageScore: null,
+    };
+  }
+
+  const totalScore = rows.reduce((sum, row) => sum + row.score, 0);
+  const averageScore = totalScore / rows.length;
+
+  return {
+    totalScans,
+    averageScore: Math.round(averageScore),
+  };
+}

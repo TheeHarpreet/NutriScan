@@ -14,7 +14,9 @@ import {
   getHistory,
   clearHistory,
   deleteHistoryItem,
+  getHistoryStats,
 } from "../services/history";
+import { getFavouritesCount } from "../services/favourites";
 
 // basic types for filtering/sorting
 type Filter = "all" | "food" | "beauty";
@@ -33,12 +35,27 @@ export default function HistoryScreen() {
 
   const isFocused = useIsFocused();
 
-  // Reload history whenever this tab becomes active
+  const [stats, setStats] = useState({
+    totalScans: 0,
+    averageScore: null as number | null,
+    favouritesCount: 0,
+  });
+
+  // reload history whenever this tab becomes active so new scans appear automatically
   useEffect(() => {
     if (!isFocused) return;
 
     const rows = getHistory(200);
     setItems(rows);
+
+    const historyStats = getHistoryStats();
+    const favouritesCount = getFavouritesCount();
+
+    setStats({
+      totalScans: historyStats.totalScans,
+      averageScore: historyStats.averageScore,
+      favouritesCount,
+    });
   }, [isFocused]);
 
   // clear history locally (does not affect the OpenFoodFacts/OpenBeautyFacts datasets)
@@ -190,6 +207,19 @@ export default function HistoryScreen() {
         <Pressable onPress={onClear}>
           <Text style={styles.clear}>Clear</Text>
         </Pressable>
+      </View>
+
+      {/* Small analytics summary from local history/favourites */}
+      <View style={styles.statsCard}>
+        <Text style={styles.statsTitle}>Your activity</Text>
+        <Text style={styles.statsText}>Total scans: {stats.totalScans}</Text>
+        <Text style={styles.statsText}>
+          Average score:{" "}
+          {stats.averageScore != null ? `${stats.averageScore}/100` : "—"}
+        </Text>
+        <Text style={styles.statsText}>
+          Favourites: {stats.favouritesCount}
+        </Text>
       </View>
 
       {/* search */}
@@ -365,5 +395,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     color: "#0f172a",
+  },
+  statsCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  statsTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    marginBottom: 6,
+  },
+  statsText: {
+    fontSize: 13,
+    color: "#475569",
+    marginTop: 2,
   },
 });
