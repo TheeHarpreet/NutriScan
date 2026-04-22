@@ -5,12 +5,14 @@ import {
   ActivityIndicator,
   Button,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { CameraView, useCameraPermissions } from "expo-camera";
 
 export default function ScanScreen({ navigation }: any) {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+
+  const scanLock = useRef(false);
 
   // ask for camera permission
   useEffect(() => {
@@ -39,15 +41,22 @@ export default function ScanScreen({ navigation }: any) {
 
   const handleBarCodeScanned = (result: { data: string }) => {
     // prevent double scans
-    if (scanned) return;
+    if (scanLock.current) return;
+    scanLock.current = true;
+
     setScanned(true);
 
     // navigate to product screen with EAN
     const ean = result.data;
+    console.log("Barcode recognised:", ean);
+
     navigation.navigate("Product", { ean: ean, saveToHistory: true });
 
     // allow new scan after a short delay
-    setTimeout(() => setScanned(false), 1500);
+    setTimeout(() => {
+      scanLock.current = false;
+      setScanned(false);
+    }, 1500);
   };
 
   // return the view

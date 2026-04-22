@@ -8,7 +8,7 @@ export type HistoryItem = {
   score: number | null;
   source: "food" | "beauty" | null;
   image_url: string | null;
-  scanned_at: string; // ISO string
+  scanned_at: string;
 
   sugars_100g?: number | null;
   salt_100g?: number | null;

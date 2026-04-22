@@ -30,7 +30,6 @@ import { useNavigation } from "@react-navigation/native";
 type Props = {
   route: { params: { ean: string; saveToHistory?: boolean } };
 };
-
 // helper to get kcal value from different type of fields
 function getEnergyKcal(nutriments: any): number | null {
   // the older naming
@@ -52,6 +51,69 @@ function getEnergyKcal(nutriments: any): number | null {
   return null;
 }
 
+function normaliseRecommendationCategory(
+  category: string | null,
+): string | null {
+  if (!category) return null;
+
+  const c = category.toLowerCase();
+
+  if (
+    c.includes("condiment") ||
+    c.includes("sauce") ||
+    c.includes("mayonnaise") ||
+    c.includes("dressing")
+  ) {
+    return "condiments";
+  }
+
+  if (
+    c.includes("dair") ||
+    c.includes("cheese") ||
+    c.includes("yogurt") ||
+    c.includes("yoghurt")
+  ) {
+    return "dairies";
+  }
+
+  if (c.includes("crisp") || c.includes("chip") || c.includes("snack")) {
+    return "crisps";
+  }
+
+  if (
+    c.includes("beverage") ||
+    c.includes("soft-drink") ||
+    c.includes("soda")
+  ) {
+    return "soft-drinks";
+  }
+
+  return null;
+}
+
+function getExtraRecommendationBarcodes(category: string | null): string[] {
+  const normalised = normaliseRecommendationCategory(category);
+
+  const map: Record<string, string[]> = {
+    condiments: ["8809210343370", "0815074020010", "5000157076403"],
+    dairies: ["7622201693954", "4088600046679", "4056489933861"],
+    crisps: ["5000328481115", "5060336501530", "5053990156009"],
+    "soft-drinks": ["5449000000996", "5449000133335", "5449000104885"],
+  };
+
+  if (!normalised) return [];
+  return map[normalised] || [];
+}
+
+function shuffleArray<T>(array: T[]): T[] {
+  const copy = [...array];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 export default function ProductScreen({ route }: Props) {
   // read the barcode value passed from ScanScreen
   const { ean, saveToHistory = false } = route.params;
@@ -65,6 +127,9 @@ export default function ProductScreen({ route }: Props) {
 
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+  const [lastRecommendationEan, setLastRecommendationEan] = useState<
+    string | null
+  >(null);
 
   const navigation = useNavigation<any>();
 
@@ -106,43 +171,82 @@ export default function ProductScreen({ route }: Props) {
   }, [ean]);
 
   // category pick (first tag is good enough for mvp)
-  const categoryTag =
-    Array.isArray(product?.categories_tags) &&
-    product.categories_tags.length > 0
-      ? product.categories_tags[0]
-      : null;
+  const categoryTag = Array.isArray(product?.categories_tags)
+    ? product.categories_tags
+    : [];
 
   // build personalised recommendations using history + favourites.
   // for now this only runs for food products with a usable category tag.
   useEffect(() => {
     const loadRecommendations = async () => {
-      if (!product || source !== "food" || !categoryTag) {
+      if (!product || source !== "food") {
         setRecommendations([]);
         return;
       }
 
+      // do not fetch again for the same product
+      if (lastRecommendationEan === ean) return;
+
+      // mark this product as already attempted
+      setLastRecommendationEan(ean);
       setLoadingRecommendations(true);
 
       try {
-        // load stored user behaviour from SQLite
-        const historyRows = getHistory(200);
-        const favouriteRows = getFavourites(200);
+        const categoryTag =
+          Array.isArray(product?.categories_tags) &&
+          product.categories_tags.length > 0
+            ? product.categories_tags[0]
+            : null;
 
-        // build a simple preference profile from past scans and favourites
-        const profile = buildUserProfile(historyRows, favouriteRows);
+        const extraBarcodes = shuffleArray(
+          getExtraRecommendationBarcodes(categoryTag),
+        ).filter((code) => code !== ean);
 
-        // search OpenFoodFacts for products in the same category
-        const candidates = await searchFoodByCategory(categoryTag, 20);
+        const extraCandidates: any[] = [];
 
-        // remove the current product so it does not recommend itself
-        const filtered = candidates.filter((p: any) => {
-          return p?.code !== ean;
-        });
+        // fetch one by one to avoid rate limiting
+        for (const code of extraBarcodes) {
+          if (extraCandidates.length >= 3) break;
 
-        // rank the candidates using health score + preference boost
-        const ranked = rankRecommendations(filtered, profile);
+          try {
+            const result = await fetchFoodByEAN(code);
+            if (result) {
+              extraCandidates.push(result);
+            }
+          } catch (error) {
+            console.log("Recommendation barcode fetch failed:", code);
+          }
+        }
 
-        setRecommendations(ranked);
+        const neutralProfile = {
+          averageSugar: null,
+          averageSalt: null,
+          averageProtein: null,
+          averageFibre: null,
+          averageAdditives: null,
+        };
+
+        const rankedExtras = rankRecommendations(
+          extraCandidates,
+          neutralProfile,
+        ).map((item: any) => ({
+          ...item,
+          reason: "Similar healthier product from the same category",
+        }));
+
+        console.log("Current category:", categoryTag);
+        console.log(
+          "Normalised category:",
+          normaliseRecommendationCategory(categoryTag),
+        );
+        console.log("Extra candidates:", extraCandidates.length);
+        console.log(
+          "Ranked recommendations:",
+          rankedExtras.length,
+          rankedExtras,
+        );
+
+        setRecommendations(rankedExtras.slice(0, 5));
       } catch (error) {
         console.log("Recommendation error:", error);
         setRecommendations([]);
@@ -152,7 +256,7 @@ export default function ProductScreen({ route }: Props) {
     };
 
     loadRecommendations();
-  }, [product, source, categoryTag, ean]);
+  }, [product, source, ean]);
 
   // Shorter alias to make nutrition values easier to use
   const nutrients = product?.nutriments || {};
@@ -202,7 +306,7 @@ export default function ProductScreen({ route }: Props) {
       protein_100g: protein,
       fibre_100g: fibre,
       additives_n: additivesCount,
-      category_tag: categoryTag,
+      category_tag: categoryTag[0] ?? null,
     });
   }, [saveToHistory, ean, product, source, displayName, health?.score]);
 
@@ -298,7 +402,7 @@ export default function ProductScreen({ route }: Props) {
                   protein_100g: protein,
                   fibre_100g: fibre,
                   additives_n: additivesCount,
-                  category_tag: categoryTag,
+                  category_tag: categoryTag[0] ?? null,
                 });
                 setFavourite(true);
               }
