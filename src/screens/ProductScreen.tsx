@@ -97,7 +97,7 @@ function getExtraRecommendationBarcodes(category: string | null): string[] {
   const map: Record<string, string[]> = {
     condiments: ["8809210343370", "0815074020010", "5000157076403"],
     dairies: ["7622201693954", "4088600046679", "4056489933861"],
-    crisps: ["5000328481115", "5060336501530", "5053990156009"],
+    crisps: ["5000328015873", "0043000045695", "5013665100065"],
     "soft-drinks": ["5449000000996", "5449000133335", "5449000104885"],
   };
 
