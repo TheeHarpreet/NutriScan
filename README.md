@@ -167,10 +167,9 @@ Potential future enhancements include:
 
 # 📸 Video Demo and Screenshots
 
-## 🎥 Video Demo
+## 🎥 Demo Video
 
-
-[▶️ Watch Demo](screenshots/NutriScan-demo-video2.mp4)
+[![Watch Demo](screenshots/product-screen.png)](https://youtube.com/shorts/fCI_rcUnzzc?feature=share)
 
 ## 🖼️ Screenshots
 
