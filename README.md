@@ -188,7 +188,7 @@ Potential future enhancements include:
 
 <td align="center">
 <b>❤️ Favourites</b><br>
-<img src="screenshots/Nutriscan-Favourite-SS.PNG" width="260"/>
+<img src="screenshots/Nutriscan-Favourites-SS.PNG" width="260"/>
 </td>
 </tr>
 
