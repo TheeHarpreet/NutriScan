@@ -172,9 +172,7 @@ Potential future enhancements include:
 
 [▶️ Watch Demo](screenshots/NutriScan-demo-video2.mp4)
 
-> screenshots of App:
-
-##  Screenshots
+## 🖼️ Screenshots
 
 <table>
 <tr>
