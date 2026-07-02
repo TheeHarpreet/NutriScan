@@ -167,9 +167,10 @@ Potential future enhancements include:
 
 # 📸 Video Demo and Screenshots
 
-## Video Demo
+## 🎥 Video Demo
 
-https://github.com/user-attachments/assets/8f67d281-8e06-41cd-96e9-f24a1f6173bdide
+
+[▶️ Watch Demo](NutriScan-demo-video2.mp4)
 
 > screenshots of App:
 
