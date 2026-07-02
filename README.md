@@ -1,3 +1,7 @@
+
+
+
+
 # 🥗 NutriScan
 
 > A cross-platform mobile application that helps users make healthier food choices by scanning product barcodes, analysing nutritional information and generating personalised food recommendations.
@@ -161,11 +165,15 @@ Potential future enhancements include:
 
 ---
 
-# 📸 Screenshots
+# 📸 Video Demo and Screenshots
 
-> screenshots of:
+## Video Demo
 
-## 📸 Screenshots
+https://github.com/user-attachments/assets/8f67d281-8e06-41cd-96e9-f24a1f6173bdide
+
+> screenshots of App:
+
+##  Screenshots
 
 <table>
 <tr>
@@ -225,9 +233,8 @@ It also improved my problem-solving skills through debugging, performance optimi
 
 **Harpreet Singh Roopra**
 
-BSc (Hons) Computer Science
 
-Leeds Beckett University
+
 
 ---
 
