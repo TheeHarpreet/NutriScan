@@ -165,12 +165,40 @@ Potential future enhancements include:
 
 > screenshots of:
 
-- Home Screen
-- Barcode Scanner
-- Product Screen
-- History
-- Favourites
-- Personalised Recommendations
+## 📸 Screenshots
+
+<table>
+<tr>
+<td align="center">
+<b>📦 Product Screen</b><br>
+<img src="screenshots/Nutriscan-Main-SS.PNG" width="260"/>
+</td>
+
+<td align="center">
+<b>📷 Barcode Scanner</b><br>
+<img src="screenshots/Nutriscan-Scan-SS.PNG" width="260"/>
+</td>
+</tr>
+
+<tr>
+<td align="center">
+<b>🕒 History</b><br>
+<img src="screenshots/Nutriscan-History-SS.PNG" width="260"/>
+</td>
+
+<td align="center">
+<b>❤️ Favourites</b><br>
+<img src="screenshots/Nutriscan-Favourite-SS.PNG" width="260"/>
+</td>
+</tr>
+
+<tr>
+<td align="center">
+<b>🎯 Recommendations</b><br>
+<img src="screenshots/Nutriscan-Recommendations-SS.PNG" width="260"/>
+</td>
+</tr>
+</table>
 
 ---
 
